@@ -67,6 +67,7 @@ const mEmpleados = {
 
       return empleado;
     } catch (err) {
+      console.log("el error de la bd:", err);
       throw {
         status: 500,
         message: `Error al buscar empleado por username: ${username}`,
