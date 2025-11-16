@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import "dotenv/config";
 import empleadosRoutes from "./routes/rEmpleados.js";
 import articulosRoutes from "./routes/rArticulos.js";
 import articulosVarianteRoutes from "./routes/rArticulosVariante.js";
@@ -14,7 +13,6 @@ import error from "./middlewares/error.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
-//const port = 3001;
 
 app.use(cors());
 app.use(helmet());
