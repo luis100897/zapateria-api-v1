@@ -70,7 +70,7 @@ const mEmpleados = {
       console.log("el error de la base de datos", err);
       throw {
         status: 500,
-        message: `Error al buscar empleado por username: ${username}`,
+        message: `Error al buscar empleado por username: ${username} ${err}`,
       };
     }
   },
