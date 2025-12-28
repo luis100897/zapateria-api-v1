@@ -1,7 +1,5 @@
 import error from "../middlewares/error.js";
-import mArticulos from "../models/mArticulos.js";
-import mArticulosVariante from "../models/mArticulosVariante.js";
-import pool from "../config/db.js";
+import db from "../models/index.js";
 import validateFormData from "../helpers/validateFormData.js";
 import trimObjectValues from "../helpers/trimObjectValues.js";
 import {
@@ -9,6 +7,8 @@ import {
   validateVarianteExist,
 } from "../validators/varianteValidator.js";
 import { stockVlidator } from "../validators/stockValidator.js";
+
+const { ArticuloVariante } = db;
 
 const cArticulosVariante = {
   crearVariante: async (req, res) => {
@@ -23,7 +23,6 @@ const cArticulosVariante = {
         });
       }
       const resultadoValidacion = await validateVariante(variante);
-      console.log(resultadoValidacion);
 
       if (!resultadoValidacion.isValid) {
         return res.status(400).json({
@@ -32,13 +31,15 @@ const cArticulosVariante = {
           message: resultadoValidacion.message,
         });
       }
-      const varianteExistente = await mArticulosVariante.buscarVarianteUnica(
-        variante.talla,
-        variante.color,
-        variante.id_articulo
-      );
+      const varianteExistente = await ArticuloVariante.findOne({
+        where: {
+          talla: variante.talla,
+          color: variante.color,
+          id_articulo: variante.id_articulo,
+        },
+      });
 
-      if (varianteExistente && varianteExistente.length > 0) {
+      if (varianteExistente) {
         return res.status(409).json({
           code: 409,
           title: "Error 409: Conflict",
@@ -49,7 +50,7 @@ const cArticulosVariante = {
       variante.stock = parseInt(variante.stock);
       variante.id_articulo = parseInt(variante.id_articulo);
       variante.precio = parseFloat(variante.precio.replace(",", "."));
-      await mArticulosVariante.crearVariante(variante);
+      await ArticuloVariante.create(variante);
       return res.status(201).json({
         code: 201,
         title: "Created",
@@ -62,7 +63,7 @@ const cArticulosVariante = {
   },
   obtenerListaVariantes: async (req, res) => {
     try {
-      const variantes = await mArticulosVariante.obtenerListaVariantes();
+      const variantes = await ArticuloVariante.findAll();
       res.status(200).json({
         code: 200,
         title: "ok",
@@ -74,9 +75,7 @@ const cArticulosVariante = {
   },
   obtenerVariantePorId: async (req, res) => {
     try {
-      const variante = await mArticulosVariante.obtenerVariantePorId(
-        req.params.id
-      );
+      const variante = await ArticuloVariante.findByPk(req.params.id);
       if (!variante) {
         return res
           .status(404)
@@ -100,10 +99,6 @@ const cArticulosVariante = {
         });
       }
       const resultadoValidacion = await validateVariante(variante);
-      console.log(
-        "resultado de llamar a las validateVariante",
-        resultadoValidacion
-      );
       if (!resultadoValidacion.isValid) {
         return res.status(400).json({
           code: 400,
@@ -124,7 +119,9 @@ const cArticulosVariante = {
       variante.stock = parseInt(variante.stock);
       variante.id_articulo = parseInt(variante.id_articulo);
       variante.precio = parseFloat(variante.precio.replace(",", "."));
-      await mArticulosVariante.editarVariante(req.params.id, variante);
+      await ArticuloVariante.update(variante, {
+        where: { id_variante: id_variante },
+      });
       return res.status(200).json({
         code: 200,
         title: "ok",
@@ -137,8 +134,7 @@ const cArticulosVariante = {
   obtenerDetallesVariantePorId: async (req, res) => {
     const id_variante = req.params.id;
     try {
-      const varianteDetalles =
-        await mArticulosVariante.obtenerDetallesVariantePorId(id_variante);
+      const varianteDetalles = await ArticuloVariante.findByPk(id_variante);
       if (varianteDetalles !== null) {
         return res.status(200).json({
           code: 200,
@@ -156,7 +152,6 @@ const cArticulosVariante = {
   },
 
   actualizarStock: async (req, res) => {
-    let connection;
     try {
       const id_variante = req.params.id;
       const variante = trimObjectValues(req.body);
@@ -178,13 +173,11 @@ const cArticulosVariante = {
         });
       }
 
-      connection = await pool.getConnection();
-
-      await mArticulosVariante.actualizarStockMas(
-        id_variante,
-        cantidad,
-        connection
+      await ArticuloVariante.increment(
+        { stock: cantidad },
+        { where: { id_variante: id_variante } }
       );
+
       res.status(200).json({
         code: 200,
         title: "OK",
@@ -192,8 +185,6 @@ const cArticulosVariante = {
       });
     } catch (err) {
       return error.e500(req, res, err);
-    } finally {
-      if (connection) connection.release();
     }
   },
 };

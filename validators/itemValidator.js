@@ -1,4 +1,5 @@
-import mArticulos from "../models/mArticulos.js";
+import db from "../models/index.js";
+const { Articulo } = db;
 
 export const validarLongitudCampos = (articulo) => {
   return articulo.nombre.length > 100 || articulo.descripcion.length > 255;
@@ -12,12 +13,14 @@ export const itemValidator = async (articulo) => {
       message: "La longitud de algunos campos excede el límite permitido.",
     };
   }
-  const articuloExiste = await mArticulos.buscarArticuloUnico(
-    articulo.nombre,
-    articulo.descripcion
-  );
+  const articuloExiste = await Articulo.findOne({
+    where: {
+      nombre: articulo.nombre,
+      descripcion: articulo.descripcion,
+    },
+  });
 
-  if (articuloExiste && articuloExiste.length > 0) {
+  if (articuloExiste) {
     return {
       code: 409,
       title: "Error 409: Conflict",

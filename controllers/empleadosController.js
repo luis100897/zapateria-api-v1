@@ -1,4 +1,4 @@
-import mEmpleados from "../models/mEmpleados.js";
+import db from "../models/index.js";
 import error from "../middlewares/error.js";
 import moment from "moment";
 import trimObjectValues from "../helpers/trimObjectValues.js";
@@ -8,6 +8,7 @@ import {
   validateEmployeeExistence,
   validateUserExist,
 } from "../validators/employeeValidator.js";
+const { Empleado, TipoEmpleado } = db;
 
 const cEmpleados = {
   crearEmpleado: async (req, res, err) => {
@@ -51,7 +52,7 @@ const cEmpleados = {
         });
       }
       empleado.id_tipo_empleado = parseInt(empleado.id_tipo_empleado);
-      await mEmpleados.crearEmpleado(empleado);
+      await Empleado.create(empleado);
       res.status(201).json({
         code: 201,
         title: "Created",
@@ -65,13 +66,14 @@ const cEmpleados = {
 
   obtenerListaEmpleados: async (req, res) => {
     try {
-      const empleados = await mEmpleados.obtenerListaEmpleados();
+      const empleados = await Empleado.findAll({
+        attributes: { exclude: ["password"] },
+      });
       const empleadosFormateados = empleados.map((empleado) => {
-        const fecha = moment(empleado.fecha_registro).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
+        const data = empleado.toJSON();
+        const fecha = moment(data.fecha_registro).format("DD/MM/YYYY HH:mm:ss");
         return {
-          ...empleado,
+          ...data,
           fecha_registro: fecha,
         };
       });
@@ -86,15 +88,22 @@ const cEmpleados = {
 
   obtenerEmpleadoPorId: async (req, res) => {
     try {
-      const empleado = await mEmpleados.obtenerEmpleadoPorId(req.params.id);
+      const empleado = await Empleado.findByPk(req.params.id, {
+        include: [
+          {
+            model: TipoEmpleado,
+            as: "tipo_empleado",
+            attributes: ["tipo_empleado"],
+          },
+        ],
+        attributes: { exclude: ["password"] },
+      });
       if (!empleado) {
-        return res
-          .status(404)
-          .json({
-            code: 404,
-            title: "Not Found",
-            message: "Empleado no encontrado",
-          });
+        return res.status(404).json({
+          code: 404,
+          title: "Not Found",
+          message: "Empleado no encontrado",
+        });
       }
       res.json(empleado);
     } catch (error) {
@@ -106,7 +115,7 @@ const cEmpleados = {
     try {
       const empleado = trimObjectValues(req.body);
       let id_empleado = parseInt(req.params.id);
-      const result = await mEmpleados.obtenerEmpleadoPorId(id_empleado);
+      const result = await Empleado.findByPk(id_empleado);
       if (!result) {
         return error.e404(req, res);
       }
@@ -144,7 +153,11 @@ const cEmpleados = {
       }
 
       empleado.id_tipo_empleado = parseInt(empleado.id_tipo_empleado);
-      await mEmpleados.editarEmpleado(id_empleado, empleado);
+      await Empleado.update(empleado, {
+        where: {
+          id_empleado: id_empleado,
+        },
+      });
       res.status(200).json({
         code: 200,
         title: "Ok",

@@ -1,5 +1,6 @@
-import mEmpleados from "../models/mEmpleados.js";
+import db from "../models/index.js";
 
+const { Empleado } = db;
 const nombreYApellidosRegex = /^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]+$/;
 const usernameFormatRegex = /^[0-3]\d{3}$/;
 const telefonoRegex = /^\d{10}$/;
@@ -85,14 +86,17 @@ export const employeeValidator = async (empleado) => {
 };
 
 export const validateEmployeeExistence = async (empleado) => {
-  const empleadoExiste = await mEmpleados.buscarEmpleadoUnico(
-    empleado.nombre,
-    empleado.apellido_paterno,
-    empleado.apellido_materno,
-    empleado.telefono,
-    empleado.direccion
-  );
-  if (empleadoExiste && empleadoExiste.length > 0) {
+  const empleadoExiste = await Empleado.findOne({
+    where: {
+      nombre: empleado.nombre,
+      apellido_paterno: empleado.apellido_paterno,
+      apellido_materno: empleado.apellido_materno,
+      telefono: empleado.telefono,
+      direccion: empleado.direccion,
+    },
+    attributes: ["id_empleado"],
+  });
+  if (empleadoExiste) {
     return {
       code: 409,
       isValid: false,
@@ -105,9 +109,12 @@ export const validateEmployeeExistence = async (empleado) => {
   };
 };
 export const validateUserExist = async (empleado) => {
-  const existingUser = await mEmpleados.obtenerEmpleadoPorUsername(
-    empleado.username
-  );
+  const existingUser = await Empleado.findOne({
+    where: {
+      username: empleado.username,
+    },
+    attributes: ["id_empleado"],
+  });
 
   if (existingUser) {
     return {

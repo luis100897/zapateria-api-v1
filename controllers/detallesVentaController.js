@@ -1,15 +1,17 @@
-import mDetallesVenta from "../models/mDetallesVenta.js";
+import db from "../models/index.js";
 import error from "../middlewares/error.js";
-import mVentas from "../models/mVentas.js";
+const { DetallesVenta } = db;
 
 const cDetallesVenta = {
   obtenerDetallesVenta: async (req, res) => {
     try {
       let id = parseInt(req.params.id);
-      let detallesVenta = await mDetallesVenta.obtenerDetallesVentaPorIdVenta(
-        id
-      );
-      if (!detallesVenta) {
+      let detallesVenta = await DetallesVenta.findAll({
+        where: {
+          id_venta: id,
+        },
+      });
+      if (!detallesVenta || detallesVenta.length === 0) {
         error.e404(req, res);
       } else {
         res.json({ code: 200, title: "ok", detallesVenta });
@@ -21,9 +23,15 @@ const cDetallesVenta = {
   obtenerDetallesVentaPorId: async (req, res) => {
     const { id_detalle } = req.params;
     try {
-      const detalleVenta = await mDetallesVenta.obtenerDetallesVentaPorId(
-        id_detalle
-      );
+      const detalleVenta = await DetallesVenta.findByPk(id_detalle, {
+        attributes: [
+          "id_venta",
+          "id_variante",
+          "cantidad",
+          "precio_unitario",
+          "subtotal",
+        ],
+      });
       if (!detalleVenta) {
         return res.status(404).json({
           code: 404,

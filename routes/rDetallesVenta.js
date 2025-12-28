@@ -3,7 +3,7 @@ import cDetallesVenta from "../controllers/detallesVentaController.js";
 import { isAuthenticated, authorizeRole } from "../middlewares/auth.js";
 
 const router = Router();
-
+//obtiene los detalles de la venta ingresando el id de la venta
 router.get(
   "/detalles-venta/:id",
   isAuthenticated,

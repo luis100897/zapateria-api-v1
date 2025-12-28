@@ -1,17 +1,11 @@
-import mArticulos from "../models/mArticulos.js";
-import mArticulosVariante from "../models/mArticulosVariante.js";
-
+import db from "../models/index.js";
+const { Articulo, ArticuloVariante } = db;
 const formatoPrecioRegex = /^\d{1,8}(\.\d+)?$/;
 const tallaRegex = /^\d{1,2}(\.\d{1})?$/;
 const colorRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s-]+$/;
 
-/**
- * Valida un objeto variante y devuelve un resultado con el mensaje de error.
- * @param {object} variante El objeto a validar.
- * @returns {object} Un objeto con { isValid: boolean, message?: string }.
- */
 export const validateVariante = async (variante) => {
-  const articulo = await mArticulos.obtenerArticuloPorId(variante.id_articulo);
+  const articulo = await Articulo.findByPk(variante.id_articulo);
   if (!articulo) {
     return {
       isValid: false,
@@ -60,9 +54,7 @@ export const validateVariante = async (variante) => {
 };
 
 export const validateVarianteExist = async (id_variante) => {
-  const varianteExiste = await mArticulosVariante.obtenerVariantePorId(
-    id_variante
-  );
+  const varianteExiste = await ArticuloVariante.findByPk(id_variante);
 
   if (!varianteExiste) {
     return {

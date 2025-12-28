@@ -1,4 +1,5 @@
-import mArticulosVariante from "../models/mArticulosVariante.js";
+import db from "../models/index.js";
+const { ArticuloVariante } = db;
 
 export const stockVlidator = async (variante, id_variante) => {
   if (!variante.cantidad || isNaN(variante.cantidad) || variante.cantidad < 1) {
@@ -9,9 +10,7 @@ export const stockVlidator = async (variante, id_variante) => {
       message: "El valor debe ser un número y no puede ser 0",
     };
   }
-  let detailsVariante = await mArticulosVariante.obtenerDetallesVariantePorId(
-    id_variante
-  );
+  let detailsVariante = await ArticuloVariante.findByPk(id_variante);
   if (!detailsVariante) {
     return {
       code: 404,

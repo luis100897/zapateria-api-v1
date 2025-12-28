@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import "dotenv/config"; //hay que eliminar la importacion en produccion
+import { connectDB } from "./config/db.js";
 import empleadosRoutes from "./routes/rEmpleados.js";
 import articulosRoutes from "./routes/rArticulos.js";
 import articulosVarianteRoutes from "./routes/rArticulosVariante.js";
@@ -13,6 +15,7 @@ import error from "./middlewares/error.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
+connectDB();
 
 app.use(cors());
 app.use(helmet());

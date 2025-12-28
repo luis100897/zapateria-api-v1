@@ -1,19 +1,21 @@
 import error from "../middlewares/error.js";
-import mArticulosVariante from "../models/mArticulosVariante.js";
-import pool from "../config/db.js";
+import db from "../models/index.js";
 import moment from "moment";
-import mDevoluciones from "../models/mDevoluciones.js";
 import trimObjectValues from "../helpers/trimObjectValues.js";
 import validateFormData from "../helpers/validateFormData.js";
 import { devolucionValidator } from "../validators/devolucionValidator.js";
 
+const { ArticuloVariante, Devolucion, sequelize } = db;
+
 const cDevoluciones = {
   registrarDevolucion: async (req, res) => {
-    let connection;
+    const t = await sequelize.transaction();
+
     try {
       const devolucion = trimObjectValues(req.body);
 
       if (!validateFormData(devolucion)) {
+        await t.rollback();
         return res.status(400).json({
           title: "Error 400: Bad Request",
           message: "datos incompletos",
@@ -25,23 +27,21 @@ const cDevoluciones = {
       const id_detalle = parseInt(devolucion.id_detalle);
       devolucion.cantidad = parseInt(devolucion.cantidad);
 
-      const result = await devolucionValidator(devolucion);
+      const result = await devolucionValidator(devolucion, t);
       const venta = result.venta;
 
       if (!result.isValid) {
+        await t.rollback();
         return res.status(400).json({
           title: "Error 400: Bad Request",
           message: result.message,
         });
       }
 
-      connection = await pool.getConnection();
-      await connection.beginTransaction();
-
       // Insertar la devolucion
       const precio_unitario = venta.precio_unitario;
       const monto_reembolso = precio_unitario * devolucion.cantidad;
-      await mDevoluciones.registrarDevolucion(
+      await Devolucion.create(
         {
           motivo: devolucion.motivo,
           cantidad: devolucion.cantidad, // Usar la cantidad actual a devolver
@@ -51,37 +51,37 @@ const cDevoluciones = {
           id_venta,
           id_detalle,
         },
-        connection
+        { transaction: t }
       );
 
-      await mArticulosVariante.actualizarStockMas(
-        venta.id_variante,
-        devolucion.cantidad, // Usar la cantidad actual a devolver para el stock
-        connection
+      await ArticuloVariante.increment(
+        { stock: devolucion.cantidad },
+        { where: { id_variante: venta.id_variante }, transaction: t }
       );
 
       // Confirmar la transacción
-      await connection.commit();
+      await t.commit();
       res.status(201).json({
         code: 201,
         title: "ok",
         message: "Devolución generada con éxito",
       });
     } catch (err) {
-      if (connection) await connection.rollback();
+      if (t) {
+        await t.rollback();
+      }
       return error.e500(req, res, err);
-    } finally {
-      if (connection) connection.release();
     }
   },
   obtenerListaDevoluciones: async (req, res) => {
     try {
-      const devoluciones = await mDevoluciones.obtenerListaDevoluciones();
+      const devoluciones = await Devolucion.findAll();
       const devolucionesFomateadas = devoluciones.map((devolucion) => {
-        const fecha = moment(devolucion.fecha_devolucion).format(
+        const data = devolucion.toJSON();
+        const fecha = moment(data.fecha_devolucion).format(
           "DD/MM/YYYY HH:mm:ss"
         );
-        return { ...devolucion, fecha_devolucion: fecha };
+        return { ...data, fecha_devolucion: fecha };
       });
       res.status(201).json({
         code: 201,

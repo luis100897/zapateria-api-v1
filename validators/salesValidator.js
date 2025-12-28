@@ -1,8 +1,10 @@
-import pool from "../config/db.js";
+import db from "../models/index.js";
+
+const { ArticuloVariante } = db;
 
 const validarCamposNoVacios = (items) => {
   if (!Array.isArray(items) || items.length === 0) {
-    return true; // Si no es un array o está vacío, consideramos que hay datos incompletos
+    return true;
   }
   for (const item of items) {
     const { id_variante, cantidad, precio_unitario } = item;
@@ -14,22 +16,22 @@ const validarCamposNoVacios = (items) => {
       !precio_unitario ||
       !precio_unitario.toString().trim()
     ) {
-      return true; // Si algún campo está vacío o solo contiene espacios, devolvemos true (datos incompletos)
+      return true;
     }
   }
 
-  return false; // Si todos los campos de todos los items son válidos, devolvemos false (datos completos)
+  return false; //devolvemos false (datos completos)
 };
 
 export const salesValidator = async (
   metodo_pago,
   items,
-  total_venta_frontend
+  total_venta_frontend,
+  connection = null
 ) => {
-  let connection; // Declarar la conexión fuera del try
+  const transactionOption = connection ? { transaction: connection } : {};
 
   if (validarCamposNoVacios(items)) {
-    console.log("los item", items);
     return {
       code: 400,
       title: "Error 400: Bad Request",
@@ -45,23 +47,16 @@ export const salesValidator = async (
       message: "Método de pago no valido",
     };
   }
-  // Obtener una conexión del pool
-  connection = await pool.getConnection();
-
-  // Iniciar la transacción
-  await connection.beginTransaction();
 
   let total_venta = 0;
   for (const item of items) {
     const precioUnitario = parseFloat(item.precio_unitario);
-    const [varianteRows] = await connection.execute(
-      "SELECT id_variante, stock, precio FROM articulo_variante WHERE id_variante = ?",
-      [item.id_variante]
+    const variante = await ArticuloVariante.findByPk(
+      item.id_variante,
+      transactionOption
     );
-    const variante = varianteRows[0];
 
     if (!variante) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",
@@ -70,7 +65,6 @@ export const salesValidator = async (
       };
     }
     if (variante.stock < item.cantidad) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",
@@ -79,7 +73,6 @@ export const salesValidator = async (
       };
     }
     if (item.cantidad <= 0) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",
@@ -88,7 +81,6 @@ export const salesValidator = async (
       };
     }
     if (item.precio_unitario <= 0) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",
@@ -100,7 +92,6 @@ export const salesValidator = async (
       parseFloat(precioUnitario).toFixed(2) !==
       parseFloat(variante.precio).toFixed(2)
     ) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",
@@ -117,7 +108,6 @@ export const salesValidator = async (
 
   if (!isNaN(totalFront)) {
     if (totalFront.toFixed(2) !== parseFloat(total_venta).toFixed(2)) {
-      await connection.rollback(); // Rollback en caso de error de validación
       return {
         code: 400,
         title: "Error 400: Bad Request",

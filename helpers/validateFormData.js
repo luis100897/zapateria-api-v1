@@ -4,7 +4,7 @@ function validateFormData(data) {
   }
 
   for (const key in data) {
-    // Es buena práctica usar `hasOwnProperty` para evitar herencia de propiedades
+    //buena práctica usar hasOwnPropert` para evitar herencia de propiedades
     if (Object.prototype.hasOwnProperty.call(data, key)) {
       const value = data[key];
 

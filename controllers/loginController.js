@@ -1,9 +1,11 @@
-import mEmpleados from "../models/mEmpleados.js";
+import db from "../models/index.js";
 import error from "../middlewares/error.js";
 import trimObjectValues from "../helpers/trimObjectValues.js";
 import bcrypt from "bcrypt";
 import validateFormData from "../helpers/validateFormData.js";
-import jwt from "jsonwebtoken"; //
+import jwt from "jsonwebtoken";
+
+const { Empleado } = db;
 
 const cLogin = {
   login: async (req, res) => {
@@ -19,7 +21,11 @@ const cLogin = {
       }
       const { username, password } = data;
 
-      const empleado = await mEmpleados.obtenerEmpleadoPorUsername(username);
+      const empleado = await Empleado.findOne({
+        where: {
+          username: username,
+        },
+      });
 
       if (!empleado) {
         return res.status(401).json({
@@ -28,6 +34,7 @@ const cLogin = {
           message: "Usuario o contraseña incorrectos",
         });
       }
+      const empleadoData = empleado.toJSON();
 
       if (empleado.status !== "activo") {
         return res.status(401).json({
@@ -48,11 +55,11 @@ const cLogin = {
 
       // Crear el payload del JWT
       const payload = {
-        id_empleado: empleado.id_empleado,
-        id_tipo_empleado: empleado.id_tipo_empleado,
-        username: empleado.username,
-        rol: empleado.rol, // Asegúrate de que el modelo devuelva el rol
-        nombre: empleado.nombre,
+        id_empleado: empleadoData.id_empleado,
+        id_tipo_empleado: empleadoData.id_tipo_empleado,
+        username: empleadoData.username,
+        rol: empleadoData.rol,
+        nombre: empleadoData.nombre,
       };
 
       // Generar el token JWT
@@ -73,7 +80,6 @@ const cLogin = {
     }
   },
 
-  // La función de logout se simplifica al no haber sesiones en el servidor
   logout: (req, res) => {
     return res.status(200).json({ message: "Sesión cerrada con éxito" });
   },
